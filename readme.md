@@ -17,5 +17,7 @@ Presented by:
 ## PBL phases :
 
 1. ### Phase 1 :
+    
     [] presentation for project proposal
+
     [] demo basic shell
