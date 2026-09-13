@@ -1,0 +1,57 @@
+# ========================
+# Compiled Binaries & Objects
+# ========================
+*.o
+*.out
+*.obj
+*.exe
+*.so
+*.dylib
+*.a
+
+# Common shell executable names
+a.out
+cshell
+shell
+main
+app
+
+# ========================
+# Editor & IDE files
+# ========================
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains / CLion (just in case)
+.idea/
+cmake-build-*/
+
+# Terminal editors (Vim/Nano swap & temp files)
+*.swp
+*.swo
+*~
+.#*
+
+# ========================
+# OS Generated Files
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# Debug & Memory profiling
+# ========================
+*.dSYM/
+*.gdb_history
+valgrind-out.txt
+vgcore.*
+core
+core.*
+
+# ========================
+# Temporary files & Logs
+# ========================
+*.log
+*.tmp
+*.bak
