@@ -25,9 +25,7 @@ int main() {
         if (input_status == NULL) {
             break;
         }
-
         user_input[strcspn(user_input, "\n")] = 0;
-
         if (strcmp(user_input, "exit") == 0) {
             break;
         }
@@ -57,10 +55,8 @@ int main() {
                 perror("Command failed");
             }
             exit(1);
-
         } else if (process_id > 0) {
             waitpid(process_id, NULL, 0);
-
         } else {
             perror("Fork failed");
         }
