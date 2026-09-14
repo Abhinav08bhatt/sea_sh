@@ -222,21 +222,21 @@ int main() {
     > if the system failed to create a clone process when system is out of memory
 
 ```cpp
-[ Parent Shell ] 
-              │
-        fork() called
-        ┌─────┴────────────────┐
-        ▼                      ▼
-  [ Child (PID = 0) ]    [ Parent (PID > 0) ]
-        │                      │
-  execvp("ls")           waitpid(...)
-  (Transforms into ls)   (Pauses and waits...)
-        │                      │
-   Prints files                │
-        │                      │
-   ls Finishes & Dies          │
-        └─────────────────────►│
-                         Child is done!
-                         Parent wakes up.
-                         Prints next prompt: 🐚 >
+    [ Parent Shell ] 
+            │
+    fork() called
+    ┌─────┴────────────────┐
+    ▼                      ▼
+[ Child (PID = 0) ]    [ Parent (PID > 0) ]
+    │                      │
+execvp("ls")           waitpid(...)
+(Transforms into ls)   (Pauses and waits...)
+    │                      │
+Prints files                │
+    │                      │
+ls Finishes & Dies          │
+    └─────────────────────►│
+                        Child is done!
+                        Parent wakes up.
+                        Prints next prompt: 🐚 >
 ```
