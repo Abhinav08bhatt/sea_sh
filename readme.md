@@ -16,8 +16,22 @@ Presented by:
 ---
 ## PBL phases :
 
-1. ### Phase 1 :
+1. ### [Phase 1](archive/phase_1) :
     
-    [] presentation for project proposal
+    [x] presentation for project proposal
 
-    [] demo basic shell
+    [x] demo basic shell
+
+2. ### [Phase 2](archive/phase_2) :
+
+    [ ] implementation of low level shell commands (cd, history, exit, etc)
+
+    [ ] implementation of the storage of commands
+
+    [ ] using double sided linked list to traverse through the past commands using up/down arrow
+
+    [ ] making `tab` suggestion for a command
+
+    [ ] fixing the ctrl+C os killing the shell
+
+    [ ] presentation for phase 2
