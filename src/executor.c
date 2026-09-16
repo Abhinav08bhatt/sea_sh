@@ -47,3 +47,8 @@ void execute_command(char *user_input){
     }
 
 }
+
+
+// TODO: 1. Measure start and end time using clock_gettime(CLOCK_MONOTONIC, ...)
+// TODO: 2. Capture child process exit status using WEXITSTATUS(status) and return it
+// TODO: 3. (Optional) Auto-add '--color=auto' when running 'ls' so output gets colors

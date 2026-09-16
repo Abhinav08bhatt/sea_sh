@@ -78,3 +78,9 @@ void show_prompt(){
 
     fflush(stdout);
 }
+
+
+// TODO: 1. Add ANSI color macros for Success (Cyan) and Error (Red).
+// TODO: 2. Parse advanced Git status: ahead (⇡), behind (⇣), staged (+), modified (!), untracked (?).
+// TODO: 3. Print execution time if command took time (e.g., "took 3.24s").
+// TODO: 4. Dynamically color the '❯' prompt character (Cyan on success 0, Red on error != 0).

@@ -26,3 +26,8 @@ int main(){
 
     return 0;
 }
+
+
+// TODO: 1. Create variables in main() to track 'last_status' and 'exec_time'
+// TODO: 2. Pass 'last_status' and 'exec_time' into show_prompt()
+// TODO: 3. Update 'last_status' from execute_command() return value
