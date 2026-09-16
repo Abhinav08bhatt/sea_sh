@@ -48,6 +48,7 @@ void execute_command(char *user_input){
 
 }
 
+// TODO: Fix tokenizer to respect quotes (don't split spaces if inside "..." or '...')
 
 // TODO: 1. Measure start and end time using clock_gettime(CLOCK_MONOTONIC, ...)
 // TODO: 2. Capture child process exit status using WEXITSTATUS(status) and return it
