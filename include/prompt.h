@@ -1,7 +1,7 @@
 #ifndef PROMPT_H
 #define PROMPT_H
 
-void show_prompt(void);
+void show_prompt(double time_taken);
 
 #endif
 

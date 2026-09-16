@@ -46,7 +46,15 @@ void execute_command(char *user_input){
         perror("Fork Failed ");
     }
 
+
+    // ! CHEATING : to fix the newline bug (works 60% of the cases but does not fix the cause)
+    if(strcmp(arguments[0], "cat") == 0){
+        printf("\n");
+    }
+        
+
 }
+
 
 // TODO: Fix tokenizer to respect quotes (don't split spaces if inside "..." or '...')
 

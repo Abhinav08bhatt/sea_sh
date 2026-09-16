@@ -43,7 +43,7 @@ const char *get_os_icon(void) {
     #endif
 }
 
-void show_prompt(){
+void show_prompt(double time_taken){
     
     char working_directory[1024];
 
@@ -56,7 +56,7 @@ void show_prompt(){
     
     char git_branch[256];
     
-    printf("\n" 
+    printf( ""
         COLOR_BOLD "%s" COLOR_RESET 
         COLOR_CYAN "%s" COLOR_RESET 
         " in " 
@@ -67,11 +67,20 @@ void show_prompt(){
     );
 
     if (get_git_branch(git_branch, sizeof(git_branch))) {
-        printf(" on " 
-            COLOR_GREEN " %s" 
-            COLOR_RESET,
-            git_branch
-        );
+        if (time_taken < 0.01){
+            printf(" on " 
+                COLOR_GREEN " %s" 
+                COLOR_RESET,
+                git_branch
+            );
+        }
+        else {
+            printf(" on " 
+                COLOR_GREEN " %s" 
+                COLOR_RESET " took %.2f",
+                git_branch,time_taken
+            );
+        }
     }
 
     printf("\n 🐚 ❯ "UNDERLINE_BLINKING);
