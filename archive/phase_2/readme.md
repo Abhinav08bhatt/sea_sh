@@ -15,4 +15,5 @@ make
 
 ### 1. Code Entry
 
-When we run the code, it enters in the [sea_sh.c](src/sea_sh.c)
+1. When we run the code, it enters in the [sea_sh.c](src/sea_sh.c) inside a forever running `while` loop.
+2. 
