@@ -24,14 +24,16 @@ Presented by:
 
 2. ### [Phase 2](archive/phase_2) :
 
-    [ ] implementation of low level shell commands (cd, history, exit, etc)
-
-    [ ] implementation of the storage of commands
-
-    [ ] using double sided linked list to traverse through the past commands using up/down arrow
-
-    [ ] making `tab` suggestion for a command
-
-    [ ] fixing the ctrl+C os killing the shell
-
     [ ] presentation for phase 2
+
+    - #### Feature : 
+        [x] implementation of low level shell commands (cd, history, exit, etc)
+
+        [x] using double sided linked list to traverse through the past commands using up/down arrow
+        
+        [ ] implementation of the storage of commands
+
+        [ ] making `tab` suggestion for a command
+
+    - #### Bug handling :
+        [ ] fixing the ctrl+C os killing the shell
