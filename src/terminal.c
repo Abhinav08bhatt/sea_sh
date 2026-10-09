@@ -22,6 +22,11 @@ void enable_raw_mode() {
     // terminal control get attributes : it asks the system for "standard input" (STDIN_FILENO)
     // and saved them into our structure "original_termios"
     tcgetattr(STDIN_FILENO, &original_termios);
+    //! STDIN_FILENO: is a file indicator (in linux everything is treaded as a file input,ouput,erro) 
+    // 0 : standard input
+    // 1 : standard output
+    // 2 : standard error
+
 
     // if our program finishes for any reason (crash) we run disable_raw_mode function automatically
     // if we dont the terminal might get blank

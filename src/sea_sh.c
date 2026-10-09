@@ -4,12 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 #include <unistd.h>
+
+// IMPORTANT : it fixs the killing of the terminal on ctrl+c or other OS force
+#include <signal.h>
 
 #include "../include/executor.h"
 #include "../include/prompt.h"
@@ -19,9 +17,18 @@
 
 int main(){
 
+    // from the signal.h library : asking our code to ignore interrupt signals
+    //! SIGINT : SIGnal INTerrupt (signal sent by OS when we press ctrl+c to interrupt a process)
+    //! SIG_IGN : SIGnal IGNore (it tells the system to ignore this specific signal)
+    signal(SIGINT, SIG_IGN);
+
     // we runs this function from terminal.c file
     // we enables the raw mode of terminal
     enable_raw_mode();
+
+    // reading the commands from the storage file :
+    // extracting the commands from file to the runtime linked-list
+    init_history();
 
     // creating space for user_input in the memory
     char user_input[1024];
