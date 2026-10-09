@@ -21,3 +21,8 @@ Thumbs.db
 *.swp
 *~
 *.log
+
+#========================
+# Storage files
+#========================
+.sea_sh_history

@@ -21,29 +21,56 @@ void execute_command(char *user_input){
     // number of arguments in the user input
     int argument_count = 0;
 
-    // breaking the user input into tokens using space
-    char *token = strtok(user_input, " ");
-    // what happen is :
-    // if the user input is : "sudo apt update && sudo apt upgrade"
-    // it will get transformend into : "sudo\0apt update && sudo apt upgrade" (the first space was replaced by null)
+    // // breaking the user input into tokens using space
+    // char *token = strtok(user_input, " ");
+    // // what happen is :
+    // // if the user input is : "sudo apt update && sudo apt upgrade"
+    // // it will get transformend into : "sudo\0apt update && sudo apt upgrade" (the first space was replaced by null)
 
-    // once the whole user input is broken into tokens we go through each token until we reach the end 
-    while (token != NULL){
+    // // once the whole user input is broken into tokens we go through each token until we reach the end 
+    // while (token != NULL){
 
-        // we store each token in the argument array
-        // for example in first iteration : "sudo\0apt update && sudo apt upgrade"
-        // we stores : sudo as argument[0]
-        arguments[argument_count] = token;
-        // inc the argument count (so we move to next empty space in array to store next token)
-        argument_count++;
-        // now we need to separate another token for next iteration
-        token = strtok(NULL, " ");
-        // now the user input is : "sudo\0apt\0update && sudo apt upgrade"
-        // and it will read from first null to next null -> apt
+    //     // we store each token in the argument array
+    //     // for example in first iteration : "sudo\0apt update && sudo apt upgrade"
+    //     // we stores : sudo as argument[0]
+    //     arguments[argument_count] = token;
+    //     // inc the argument count (so we move to next empty space in array to store next token)
+    //     argument_count++;
+    //     // now we need to separate another token for next iteration
+    //     token = strtok(NULL, " ");
+    //     // now the user input is : "sudo\0apt\0update && sudo apt upgrade"
+    //     // and it will read from first null to next null -> apt
+    // }
+    // // making the last element of argument array as NULL needed by execvp to know command has ended
+    // arguments[argument_count] = NULL;
+
+    // a flag : 0 means not in quote ; 1 means in quote
+    int in_quotes = 0;
+    
+    // mark the very first argument at the start of user_input
+    arguments[argument_count++] = user_input;
+
+    for (int i = 0; user_input[i] != '\0'; i++) {
+        
+        // if we hit a quote -> flip our state
+        if (user_input[i] == '"' || user_input[i] == '\'') {
+            in_quotes = !in_quotes;
+        }
+        // if we hit a space AND we are NOT inside quotes, replace space with '\0'
+        else if (user_input[i] == ' ' && !in_quotes) {
+            user_input[i] = '\0'; // Cut the string here!
+            
+            // The next argument starts at the very next character
+            arguments[argument_count++] = &user_input[i + 1];
+        }
     }
+    //! at the end we just want to convert user_input that looks like this :
+    //* user_input : " git commit -m "commit message with spaces" "
+    //! into :
+    //* for execvp : " git " \0 " commit " \0 "-m " \0 ""commit message with spaces"" \0 NULL
+
     // making the last element of argument array as NULL needed by execvp to know command has ended
     arguments[argument_count] = NULL;
-
     // if user inputs nothing...a possible accidental enter or something we do nothing (code returns to sea_sh.c and shows next prompt)
     if (arguments[0] == NULL){
         return;
@@ -94,7 +121,7 @@ void execute_command(char *user_input){
 
 
 // TODO: Fix tokenizer to respect quotes (don't split spaces if inside "..." or '...')
-// not done yet
+//? DONE line 48 to 66 in this file
 // TODO: 1. Measure start and end time using clock_gettime(CLOCK_MONOTONIC, ...)
 //? Done it in the sea_sh.c
 // TODO: 2. Capture child process exit status using WEXITSTATUS(status) and return it

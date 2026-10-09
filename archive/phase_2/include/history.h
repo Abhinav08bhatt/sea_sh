@@ -7,6 +7,7 @@ typedef struct Node {
     struct Node *next;
 } Node;
 
+void init_history();
 void add_history(char *cmd);
 Node* get_last();
 Node* get_prev(Node *current);
