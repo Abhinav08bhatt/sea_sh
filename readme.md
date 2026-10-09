@@ -31,9 +31,11 @@ Presented by:
 
         [x] using double sided linked list to traverse through the past commands using up/down arrow
         
-        [ ] implementation of the storage of commands
+        [x] implementation of the storage of commands
 
-        [ ] making `tab` suggestion for a command
+        [ ] making `tab` suggestion for a command (postponed for phase 3)
 
     - #### Bug handling :
-        [ ] fixing the ctrl+C os killing the shell
+        [x] fixing the ctrl+C os killing the shell
+
+        [x] handling the string in shell inside " " (example during writing a commit message)
