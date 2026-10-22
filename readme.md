@@ -27,6 +27,7 @@ Presented by:
     [x] presentation for phase 2
 
     - #### Feature : 
+
         [x] implementation of low level shell commands (cd, history, exit, etc)
 
         [x] using double sided linked list to traverse through the past commands using up/down arrow
@@ -38,8 +39,15 @@ Presented by:
         [x] implementation of redirection symbol (`>` and `>>` only)
 
     - #### Bug handling :
+
         [x] fixing the ctrl+C os killing the shell
 
         [x] handling the string in shell inside " " (example during writing a commit message)
 
-3. ### [Phase 2]:
+3. ### [Phase 3](archive/phase_3/):
+
+    [ ] presentation for phase 3
+
+    - #### Feature :
+        
+        [ ] making `tab` suggestion for a command (from phase 2)
