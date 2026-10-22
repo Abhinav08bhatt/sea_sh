@@ -35,6 +35,8 @@ Presented by:
 
         [ ] making `tab` suggestion for a command (postponed for phase 3)
 
+        [x] implementation of redirection symbol (`>` and `>>` only)
+
     - #### Bug handling :
         [x] fixing the ctrl+C os killing the shell
 

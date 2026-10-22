@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+// Needed for open() and file flags (O_CREAT, O_WRONLY, etc.)
+#include <fcntl.h> 
+
 #include "../include/executor.h"
 #include "../include/builtins.h"
 
@@ -85,6 +88,56 @@ void execute_command(char *user_input){
 
     // if a command is not built it...it will be handled here:
 
+    //? check for redirection ('>' or '>>')
+    // creating a NULL pointer for a file as we dont know yet if user has used the > or >> 
+    char *output_file = NULL;
+    // flag variable : 0 = None, 1 = '>', 2 = '>>'
+    int redirect_mode = 0; 
+
+    // loop through the argument array until we hit the end (NULL)
+    for (int i = 0; arguments[i] != NULL; i++) {
+
+        // check if the current argument is exactly ">"
+        if (strcmp(arguments[i], ">") == 0) { // if yes this condition works
+
+            // we flag 1 to remember it is >
+            redirect_mode = 1;
+            // file name always comes just after >
+            output_file = arguments[i + 1]; 
+            // We replace ">" with NULL in the array!
+            // Because execvp needs to run only "ls -l", NOT "ls -l > file.txt".
+            // Setting arguments[i] to NULL makes execvp stop reading here and we can handle further
+            arguments[i] = NULL;
+
+            // we found the redirection symbol no need to loop anymore
+            break;
+        } 
+
+        // check if the current argument is exactly ">>"
+        else if (strcmp(arguments[i], ">>") == 0) { // if yes this condition works
+            
+            // we flag 2 to remember that >> was used
+            redirect_mode = 2;
+            // file name always comes just after >>
+            output_file = arguments[i + 1]; 
+             // We replace ">>" with NULL in the array!
+            // Because execvp needs to run only "ls -l", NOT "ls -l >> file.txt".
+            // Setting arguments[i] to NULL makes execvp stop reading here and we can handle further
+            arguments[i] = NULL;
+            
+            // we found the redirection symbol no need to check anymore
+            break;
+        }
+
+        // if no redirection symbol is found the flag stays 0
+    }
+
+    // If user wrote "ls >" without giving a filename (can happen and should not give error)
+    if (redirect_mode != 0 && output_file == NULL) {
+        fprintf(stderr, "Syntax error: missing file after redirection\n");
+        return;
+    }
+
     // creating a clone of our existing command : parent command - child command
     pid_t process_id = fork();
 
@@ -94,6 +147,47 @@ void execute_command(char *user_input){
 
     // process_id is 0 for child command : we run it
     if (process_id == 0){
+
+        // apply redirection inside child process
+        // if flag is 0 there was no redirection used so we dont do any of this
+        // if the flag is not 0 (means its either 1 or 2) the redirection was used and we perform this code
+        if (redirect_mode != 0) {
+
+            // these are linux file flags...from fcntl.h library 
+            // 0_WRONLY : Opens the file for WRite ONLY (no need to read it)
+            // O_CREAT  : If the file does not exist CREATe it and Open
+            int flags = O_WRONLY | O_CREAT; 
+
+            // if the redirect mode is > it means write and >> means append
+            if (redirect_mode == 1) { // > removes the existing content in file so write clean
+                // O_TRUNC : means TRUNCATE the file (wipe and write) 
+                flags |= O_TRUNC;  
+            } else if (redirect_mode == 2) { // >> appends content at bottom of file
+                // O_APPEND : means move to end of file and then write
+                flags |= O_APPEND; 
+            }
+
+            // open the file in the disk
+            // output_file : the name of the file (e.g. "output.txt")
+            // flags       : the rules we just configured above
+            // 0644        : standard Unix file permissions (owner can read and write; everyone else can read)
+            // open() returns a File Descriptor number (e.g. 3) pointing to our file.
+            int fd = open(output_file, flags, 0644);
+            // If open() returned -1, something failed (e.g., folder is write-protected or disk is full rare but can happen)
+            if (fd < 0) {
+                perror("Redirection open error");
+                exit(1);
+            }
+
+            // THE CORE SWITCHEROO: dup2(fd, STDOUT_FILENO)
+            // STDOUT_FILENO is literally the number 1 (the standard output screen descriptor...means when dup2 is 1 the output is shown in the screen).
+            // dup2 says: "Close Door 1 (the screen), and make door 1 point to our file (fd) instead"
+            dup2(fd, STDOUT_FILENO);
+
+            // close the file ....good practice
+            close(fd);
+        }
+
         // we simply pass all the arguments to execvp and it handles them and executes them
         int execution_status = execvp(arguments[0], arguments);
         // if the execution is success...it shows the command output and does nothing

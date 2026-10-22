@@ -1,0 +1,28 @@
+# ========================
+# Your Compiled Binary
+# ========================
+sea_sh
+*.out
+*.o
+a.out
+
+# ========================
+# VS Code & IDE Folders
+# ========================
+.vscode/
+*.code-workspace
+.idea/
+
+# ========================
+# OS & Temp Files
+# ========================
+.DS_Store
+Thumbs.db
+*.swp
+*~
+*.log
+
+#========================
+# Storage files
+#========================
+.sea_sh_history

@@ -21,9 +21,8 @@ static void raw_add_history(char *cmd) { // static is used to define a function 
         return;
     }
 
-    // defining a new empty node (using malloc)
+    // defining a new empty node (using malloc)  
     Node *new_node = malloc(sizeof(Node));
-    
     
     //! WHY USE STRDUP ???
     // new_node->command = cmd;
