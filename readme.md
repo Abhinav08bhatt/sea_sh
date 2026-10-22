@@ -24,7 +24,7 @@ Presented by:
 
 2. ### [Phase 2](archive/phase_2) :
 
-    [ ] presentation for phase 2
+    [x] presentation for phase 2
 
     - #### Feature : 
         [x] implementation of low level shell commands (cd, history, exit, etc)
@@ -41,3 +41,5 @@ Presented by:
         [x] fixing the ctrl+C os killing the shell
 
         [x] handling the string in shell inside " " (example during writing a commit message)
+
+3. ### [Phase 2]:
