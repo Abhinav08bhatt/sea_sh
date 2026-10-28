@@ -51,3 +51,5 @@ Presented by:
     - #### Feature :
         
         [ ] making `tab` suggestion for a command (from phase 2)
+
+        [ ] using search algorithm to recommend command from past in form of ghost shell
