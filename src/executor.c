@@ -13,6 +13,8 @@
 
 #include "../include/executor.h"
 #include "../include/builtins.h"
+// Needed to temporarily turn off raw mode when reading '<<' (heredoc) input from user
+#include "../include/terminal.h"
 
 // the fuction that does the job
 void execute_command(char *user_input){
@@ -75,7 +77,7 @@ void execute_command(char *user_input){
     // making the last element of argument array as NULL needed by execvp to know command has ended
     arguments[argument_count] = NULL;
     // if user inputs nothing...a possible accidental enter or something we do nothing (code returns to sea_sh.c and shows next prompt)
-    if (arguments[0] == NULL){
+    if (arguments[0] == NULL || strlen(arguments[0]) == 0){
         return;
     }
 
@@ -88,54 +90,159 @@ void execute_command(char *user_input){
 
     // if a command is not built it...it will be handled here:
 
-    //? check for redirection ('>' or '>>')
-    // creating a NULL pointer for a file as we dont know yet if user has used the > or >> 
+    //? check for redirection ('>', '>>', '<', or '<<')
+    // creating a NULL pointer for output file as we dont know yet if user has used > or >>
     char *output_file = NULL;
     // flag variable : 0 = None, 1 = '>', 2 = '>>'
-    int redirect_mode = 0; 
+    int out_redirect_mode = 0; 
 
-    // loop through the argument array until we hit the end (NULL)
-    for (int i = 0; arguments[i] != NULL; i++) {
+    // creating NULL pointers for input redirection as we dont know yet if user has used < or <<
+    char *input_file = NULL;
+    // for '<<', the token right after '<<' is not a file name...it is a stop word (delimiter) like "EOF"
+    char *heredoc_delimiter = NULL;
+    // flag variable : 0 = None, 1 = '<', 2 = '<<'
+    int in_redirect_mode = 0;
+
+    // clean_idx keeps track of actual command arguments (excluding redirection symbols & filenames)
+    // why do this instead of breaking early?
+    // because user might combine BOTH input and output redirection on one line!
+    // example : "sort < input.txt > output.txt" -> execvp should only receive ["sort", NULL]
+    int clean_idx = 0;
+
+    // loop through the argument array until we reach argument_count
+    for (int i = 0; i < argument_count; i++) {
 
         // check if the current argument is exactly ">"
         if (strcmp(arguments[i], ">") == 0) { // if yes this condition works
 
             // we flag 1 to remember it is >
-            redirect_mode = 1;
+            out_redirect_mode = 1;
             // file name always comes just after >
-            output_file = arguments[i + 1]; 
-            // We replace ">" with NULL in the array!
-            // Because execvp needs to run only "ls -l", NOT "ls -l > file.txt".
-            // Setting arguments[i] to NULL makes execvp stop reading here and we can handle further
-            arguments[i] = NULL;
-
-            // we found the redirection symbol no need to loop anymore
-            break;
+            output_file = (i + 1 < argument_count) ? arguments[i + 1] : NULL;
+            // skip the filename in the next iteration so it does not get passed to execvp
+            i++;
         } 
 
         // check if the current argument is exactly ">>"
         else if (strcmp(arguments[i], ">>") == 0) { // if yes this condition works
             
             // we flag 2 to remember that >> was used
-            redirect_mode = 2;
+            out_redirect_mode = 2;
             // file name always comes just after >>
-            output_file = arguments[i + 1]; 
-             // We replace ">>" with NULL in the array!
-            // Because execvp needs to run only "ls -l", NOT "ls -l >> file.txt".
-            // Setting arguments[i] to NULL makes execvp stop reading here and we can handle further
-            arguments[i] = NULL;
-            
-            // we found the redirection symbol no need to check anymore
-            break;
+            output_file = (i + 1 < argument_count) ? arguments[i + 1] : NULL;
+            // skip the filename in the next iteration so it does not get passed to execvp
+            i++;
         }
 
-        // if no redirection symbol is found the flag stays 0
+        // check if the current argument is exactly "<" (input redirection)
+        else if (strcmp(arguments[i], "<") == 0) {
+
+            // we flag 1 to remember that < was used
+            in_redirect_mode = 1;
+            // input file name always comes just after <
+            input_file = (i + 1 < argument_count) ? arguments[i + 1] : NULL;
+            // skip the filename in the next iteration so it does not get passed to execvp
+            i++;
+        }
+
+        // check if the current argument is exactly "<<" (here-document / heredoc)
+        else if (strcmp(arguments[i], "<<") == 0) {
+
+            // we flag 2 to remember that << was used
+            in_redirect_mode = 2;
+            // stop word (delimiter) always comes just after << (e.g. "EOF")
+            heredoc_delimiter = (i + 1 < argument_count) ? arguments[i + 1] : NULL;
+            // skip the delimiter in the next iteration so it does not get passed to execvp
+            i++;
+        }
+
+        // if it is a normal command or flag (like "ls", "-l", "sort") we keep it for execvp
+        else {
+            arguments[clean_idx++] = arguments[i];
+        }
+    }
+
+    // mark the end of the cleaned arguments array with NULL for execvp
+    arguments[clean_idx] = NULL;
+
+    // if there is no actual command left (e.g. user only typed "> file.txt") we do nothing
+    if (arguments[0] == NULL) {
+        return;
     }
 
     // If user wrote "ls >" without giving a filename (can happen and should not give error)
-    if (redirect_mode != 0 && output_file == NULL) {
-        fprintf(stderr, "Syntax error: missing file after redirection\n");
+    if (out_redirect_mode != 0 && (output_file == NULL || strlen(output_file) == 0)) {
+        fprintf(stderr, "Syntax error: missing file after output redirection\n");
         return;
+    }
+    // If user wrote "cat <" without giving an input file
+    if (in_redirect_mode == 1 && (input_file == NULL || strlen(input_file) == 0)) {
+        fprintf(stderr, "Syntax error: missing file after '<'\n");
+        return;
+    }
+    // If user wrote "cat <<" without giving a delimiter (like EOF)
+    if (in_redirect_mode == 2 && (heredoc_delimiter == NULL || strlen(heredoc_delimiter) == 0)) {
+        fprintf(stderr, "Syntax error: missing delimiter after '<<'\n");
+        return;
+    }
+
+    //? Handle '<<' (heredoc) BEFORE forking
+    // a pipe is a temporary tunnel in memory with two ends:
+    // heredoc_pipe[0] = read end (child command will read our typed text from here)
+    // heredoc_pipe[1] = write end (parent shell will write the user's lines into here)
+    int heredoc_pipe[2] = {-1, -1};
+    if (in_redirect_mode == 2) {
+        if (pipe(heredoc_pipe) == -1) {
+            perror("Heredoc pipe failed");
+            return;
+        }
+
+        //! IMPORTANT : our shell runs in raw mode (ECHO and ICANON are OFF in terminal.c)
+        // if we read with fgets() in raw mode, user won't see characters they type and backspace won't work
+        // so we temporarily disable raw mode while collecting the heredoc lines
+        disable_raw_mode();
+
+        char line[1024];
+        while (1) {
+            // show a mini prompt so user knows shell is waiting for heredoc lines
+            printf("> ");
+            fflush(stdout);
+
+            // read one line from user; if user presses Ctrl+D (EOF), fgets returns NULL
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                // clear EOF flag on stdin so future input works normally
+                clearerr(stdin);
+                printf("\n");
+                break;
+            }
+
+            // temporarily strip trailing '\n' so we can compare cleanly against heredoc_delimiter (e.g. "EOF")
+            size_t len = strlen(line);
+            int has_newline = (len > 0 && line[len - 1] == '\n');
+            if (has_newline) {
+                line[len - 1] = '\0';
+            }
+
+            // if the line matches the delimiter exactly, we stop reading heredoc input
+            if (strcmp(line, heredoc_delimiter) == 0) {
+                break;
+            }
+
+            // put the '\n' back because the command (like cat or sort) expects normal lines with newlines
+            if (has_newline) {
+                line[len - 1] = '\n';
+            }
+
+            // push this line into the write end of the pipe
+            write(heredoc_pipe[1], line, strlen(line));
+        }
+
+        // switch terminal back to raw mode for our main sea_sh input loop
+        enable_raw_mode();
+
+        // close the write end of the pipe in parent
+        // (VERY IMPORTANT : if write end stays open, the child command will wait forever thinking more data is coming!)
+        close(heredoc_pipe[1]);
     }
 
     // creating a clone of our existing command : parent command - child command
@@ -148,21 +255,47 @@ void execute_command(char *user_input){
     // process_id is 0 for child command : we run it
     if (process_id == 0){
 
-        // apply redirection inside child process
-        // if flag is 0 there was no redirection used so we dont do any of this
+        // apply input redirection inside child process ('<' or '<<')
+        if (in_redirect_mode == 1) {
+            // O_RDONLY : Opens the file for ReaD ONLY (we are feeding this file as input to the command)
+            int fd_in = open(input_file, O_RDONLY);
+            // If open() returned -1, file probably doesn't exist or has no read permission
+            if (fd_in < 0) {
+                perror("Input redirection open error");
+                exit(1);
+            }
+
+            // THE CORE SWITCHEROO FOR INPUT: dup2(fd_in, STDIN_FILENO)
+            // STDIN_FILENO is literally the number 0 (standard input / keyboard).
+            // dup2 says: "Close Door 0 (the keyboard), and make door 0 read from our file (fd_in) instead"
+            dup2(fd_in, STDIN_FILENO);
+
+            // close the extra file descriptor ....good practice
+            close(fd_in);
+        }
+        else if (in_redirect_mode == 2) {
+            // Make Door 0 (STDIN_FILENO) read from the read-end of our heredoc pipe instead of the keyboard
+            dup2(heredoc_pipe[0], STDIN_FILENO);
+
+            // close the original read-end fd now that STDIN_FILENO points to it
+            close(heredoc_pipe[0]);
+        }
+
+        // apply output redirection inside child process ('>' or '>>')
+        // if flag is 0 there was no output redirection used so we dont do any of this
         // if the flag is not 0 (means its either 1 or 2) the redirection was used and we perform this code
-        if (redirect_mode != 0) {
+        if (out_redirect_mode != 0) {
 
             // these are linux file flags...from fcntl.h library 
-            // 0_WRONLY : Opens the file for WRite ONLY (no need to read it)
+            // O_WRONLY : Opens the file for WRite ONLY (no need to read it)
             // O_CREAT  : If the file does not exist CREATe it and Open
             int flags = O_WRONLY | O_CREAT; 
 
             // if the redirect mode is > it means write and >> means append
-            if (redirect_mode == 1) { // > removes the existing content in file so write clean
+            if (out_redirect_mode == 1) { // > removes the existing content in file so write clean
                 // O_TRUNC : means TRUNCATE the file (wipe and write) 
                 flags |= O_TRUNC;  
-            } else if (redirect_mode == 2) { // >> appends content at bottom of file
+            } else if (out_redirect_mode == 2) { // >> appends content at bottom of file
                 // O_APPEND : means move to end of file and then write
                 flags |= O_APPEND; 
             }
@@ -200,10 +333,17 @@ void execute_command(char *user_input){
     }
     // process_id of parent command is always above 0 : we make it wait until the child is done with job
     else if (process_id > 0) {
+        // parent does not need the read end of the heredoc pipe, so close it to prevent fd leaks
+        if (in_redirect_mode == 2) {
+            close(heredoc_pipe[0]);
+        }
         waitpid(process_id, NULL, 0);
     }
     // rare but happens when memory is full...then we need to say that we could not fork
     else{
+        if (in_redirect_mode == 2) {
+            close(heredoc_pipe[0]);
+        }
         perror("Fork Failed ");
     }
 
