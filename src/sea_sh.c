@@ -13,7 +13,33 @@
 #include "../include/prompt.h"
 #include "../include/terminal.h"
 #include "../include/history.h"
+#include "../include/autocomplete.h"
 
+// ANSI dim grey color for ghost autocomplete text
+#define GHOST_COLOR "\033[90m"
+#define COLOR_RESET "\033[0m"
+
+// small helper to show (or clear) the ghost autocomplete text after the cursor
+static void refresh_ghost_text(const char *user_input, int i, int cursor_pos) {
+    // save cursor, clear everything to the right (removes old ghost text)
+    printf("\33[s\33[K");
+
+    // if cursor is in the middle of the line, reprint the characters after cursor (no ghost text)
+    if (cursor_pos < i) {
+        printf("%s", &user_input[cursor_pos]);
+    }
+    // only show ghost suggestion when cursor is at the very end and user typed at least 1 char
+    else if (cursor_pos == i && i > 0) {
+        const char *suggestion = get_suggestion(user_input);
+        if (suggestion != NULL) {
+            printf(GHOST_COLOR "%s" COLOR_RESET, suggestion);
+        }
+    }
+
+    // restore cursor back to where the user is typing
+    printf("\33[u");
+    fflush(stdout);
+}
 
 int main(){
 
@@ -140,6 +166,20 @@ int main(){
                     if (cursor_pos < i) {
                         printf("\033[C");
                         cursor_pos++;
+                        // if we just reached the end of the line, show ghost suggestion if available
+                        if (cursor_pos == i) {
+                            refresh_ghost_text(user_input, i, cursor_pos);
+                        }
+                    }
+                    // if cursor is ALREADY at the end, Right Arrow accepts the ghost suggestion (just like zsh/fish)
+                    else if (cursor_pos == i && i > 0) {
+                        const char *suggestion = get_suggestion(user_input);
+                        if (suggestion != NULL && (strlen(user_input) + strlen(suggestion) < sizeof(user_input))) {
+                            strcat(user_input, suggestion);
+                            printf("\33[K%s", suggestion);
+                            i = strlen(user_input);
+                            cursor_pos = i;
+                        }
                     }
                 } 
                 // if user press left arrow key : ^[[D
@@ -148,11 +188,29 @@ int main(){
                     if (cursor_pos > 0) {
                         printf("\033[D");
                         cursor_pos--;
+                        // clear ghost text while editing in the middle of the command
+                        refresh_ghost_text(user_input, i, cursor_pos);
                     }
                 }
 
                 // clearing the buffer (just to keep it clean)
                 fflush(stdout);
+            }
+
+            // handling Tab key ('\t' / 9 in ascii) : accept the ghost autocomplete suggestion
+            else if (c == '\t') {
+                if (cursor_pos == i && i > 0) {
+                    const char *suggestion = get_suggestion(user_input);
+                    if (suggestion != NULL && (strlen(user_input) + strlen(suggestion) < sizeof(user_input))) {
+                        // append the suggestion into our user_input buffer
+                        strcat(user_input, suggestion);
+                        // overwrite the dim grey ghost text with normal bright text
+                        printf("\33[K%s", suggestion);
+                        i = strlen(user_input);
+                        cursor_pos = i;
+                        fflush(stdout);
+                    }
+                }
             }
 
             // handling backspace key : 127 in ascii
@@ -171,21 +229,18 @@ int main(){
                     printf("\b\33[K");
 
                     // showing the characters that were right side from the deleted character to now position
-                    printf("%s", &user_input[cursor_pos]);
-                    
-                    // now after showing the characters again our literal terminal cursor moves to end of the line
-                    // to bring it back where it was we back it uing \b "backspace escape sequence"
-                    for (int j = 0; j < (i - cursor_pos); j++){
-                        printf("\b");
-                    }
-                    
-                    // clearing the buffer (just to keep it clean)
-                    fflush(stdout);
+                    // and updating the ghost suggestion if cursor is at the end
+                    refresh_ghost_text(user_input, i, cursor_pos);
                 }
             } 
 
             // if there was no arrow key pressed no backspace pressed : it means it was a normal character that is a command user is trying to input
             else {
+                // safety check so user does not overflow the 1024 buffer
+                if (i >= (int)sizeof(user_input) - 1) {
+                    continue;
+                }
+
                 // if a normal elem is pressed we shift everything on its right to 1 step making a hole for our new elem
                 // example : [a],[b],[c],[NULL] and my cursor is after [c] it does : [a],[b],[c],[ ],[NULL] 
                 // example : [a],[b],[d],[NULL] and my cursor is after [b] it does : [a],[b],[ ],[d],[NULL] 
@@ -202,19 +257,17 @@ int main(){
                 // to handle it we d some steps :
                 // we prints the new character in the cursor postion : [c],[a],[t] becomes [c],[o],[t] (a is replaced by o visually)
                 putchar(c);
-                // we saves the current cursor position (the position at [o])
-                printf("\33[s");
-                // we prints stuff after cursor postion : [c],[o],[a],[t] ([a],[t] was recalled from memory to be printed after the cursor position [o])
-                printf("%s", &user_input[cursor_pos]);
-                // brings cursor back to saved position (after printing [a],[t] our cursor will move to end which we dont want)
-                printf("\33[u");
-
-                // clearing the buffer (just to keep it clean)
-                fflush(stdout);
+                // updates remaining characters after cursor OR shows the grey ghost suggestion if at the end
+                refresh_ghost_text(user_input, i, cursor_pos);
             }
         }
 
         // the above while loop ends when we press the enter button : \n : newline key
+
+        // if there was grey ghost text showing at the end of the line, clear it before executing
+        if (cursor_pos == i) {
+            printf("\33[K");
+        }
 
         // we print the \n key to make rest of the program work in next line
         printf("\n");
