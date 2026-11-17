@@ -50,6 +50,12 @@ Presented by:
 
     - #### Feature :
         
-        [ ] making `tab` suggestion for a command (from phase 2)
+        [x] implementation of input redirection `<` and here-doc `<<` 
 
-        [ ] using search algorithm to recommend command from past in form of ghost shell
+        [x] implementation of pipes '|'
+
+        [x] ghost text recommendation from recent-to-past commands (works using `tab` and `right arrow key`)
+
+    - #### Bug handling :
+
+        [x] pipes `\` inside a `"` shall not be considered as a pipe but as a character 
